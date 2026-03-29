@@ -1,67 +1,78 @@
-ACTION_SPACE = [
-    "A_TRACE_CAUSAL",
-    "A_LOG_METRIC_CORR",
-    "A_LOG_SIGNATURE_ONLY",
-    "A_CHANGE_CENTRIC",
-    "B_CORR_30M_2HOP_PRUNE_TRACE",
-    "B_LOGSIG_30M_1HOP_ADD_OVERLOAD",
-    "B_CHANGE_30M_PRIOR_DEPLOY",
-    "B_TRACE_15M_1HOP_TOPO_WEIGHT",
-    "C_LOOKBACK_30M",
-    "C_NEIGHBORS_2HOP",
-]
+from enum import Enum
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
 
+class ActionCategory(str, Enum):
+    ANALYTIC_PROBE = "AnalyticProbe"      # Changes how we analyze telemetry
+    VERIFICATION_PROBE = "VerificationProbe" # Active check or experiment
+    ESCALATION = "Escalation"            # Human or system-level alert
 
-def apply_action_to_strategy(base_strategy: dict, action: str) -> dict:
+class ActionProbe(BaseModel):
+    id: str
+    category: ActionCategory
+    description: str
+    params: Dict[str, Any] = {}
+    risk_level: str = "LOW"
+
+# Taxonomy Mapping (Existing AOGC Actions -> New Probes)
+TAXONOMY = {
+    "C_LOOKBACK_30M": ActionProbe(
+        id="C_LOOKBACK_30M",
+        category=ActionCategory.ANALYTIC_PROBE,
+        description="Expand analysis window to 30 minutes.",
+        params={"lookback_minutes": 30}
+    ),
+    "C_NEIGHBORS_2HOP": ActionProbe(
+        id="C_NEIGHBORS_2HOP",
+        category=ActionCategory.ANALYTIC_PROBE,
+        description="Expand topology search to 2-hop neighbors.",
+        params={"neighbor_hops": 2}
+    ),
+    "B_LOGSIG_30M_1HOP_ADD_OVERLOAD": ActionProbe(
+        id="B_LOGSIG_30M_1HOP_ADD_OVERLOAD",
+        category=ActionCategory.ANALYTIC_PROBE,
+        description="Log-heavy analysis with overload fallbacks.",
+        params={"mode": "LOG_SIGNATURE_ONLY", "lookback_minutes": 30, "add_overload_fallbacks": True}
+    ),
+    "PROBE_DEEP_TRACE": ActionProbe(
+        id="PROBE_DEEP_TRACE",
+        category=ActionCategory.VERIFICATION_PROBE,
+        description="Request deeper sampling for specific trace IDs.",
+        params={"sampling_rate": 1.0},
+        risk_level="LOW"
+    ),
+    "ESCALATE_SRE": ActionProbe(
+        id="ESCALATE_SRE",
+        category=ActionCategory.ESCALATION,
+        description="Escalate unverified contradiction to SRE.",
+        params={"channel": "pagerduty"}
+    )
+}
+
+def apply_action_to_strategy(base_strategy: dict, action_id: str) -> dict:
+    """Refactored strategy mutation using the new taxonomy."""
     s = dict(base_strategy)
+    
+    # Handle legacy mapping or direct lookup
+    probe = TAXONOMY.get(action_id)
+    if not probe:
+        # Fallback to legacy string-based logic if not in taxonomy
+        return _legacy_apply(s, action_id)
 
-    s.setdefault("lookback_minutes", 15)
-    s.setdefault("neighbor_hops", 1)
-    s.setdefault("mode", "TRACE_CAUSAL")
-    s.setdefault("weights_preset", "balanced")
-    s.setdefault("prune_trace_dependent", False)
-    s.setdefault("add_overload_fallbacks", False)
-    s.setdefault("prior_boost", {})
+    if probe.category == ActionCategory.ANALYTIC_PROBE:
+        s.update(probe.params)
+    
+    return s
 
+def _legacy_apply(s: dict, action: str) -> dict:
+    # Preserve legacy logic for backward compatibility
     if action == "A_TRACE_CAUSAL":
         s["mode"] = "TRACE_CAUSAL"
     elif action == "A_LOG_METRIC_CORR":
         s["mode"] = "LOG_METRIC_CORRELATION"
-    elif action == "A_LOG_SIGNATURE_ONLY":
-        s["mode"] = "LOG_SIGNATURE_ONLY"
-    elif action == "A_CHANGE_CENTRIC":
-        s["mode"] = "CHANGE_CENTRIC"
-
-    elif action == "B_CORR_30M_2HOP_PRUNE_TRACE":
-        s["mode"] = "LOG_METRIC_CORRELATION"
-        s["lookback_minutes"] = 30
-        s["neighbor_hops"] = 2
-        s["prune_trace_dependent"] = True
-        s["weights_preset"] = "corr_heavy"
-
-    elif action == "B_LOGSIG_30M_1HOP_ADD_OVERLOAD":
-        s["mode"] = "LOG_SIGNATURE_ONLY"
-        s["lookback_minutes"] = 30
-        s["neighbor_hops"] = 1
-        s["add_overload_fallbacks"] = True
-        s["weights_preset"] = "log_heavy"
-
-    elif action == "B_CHANGE_30M_PRIOR_DEPLOY":
-        s["mode"] = "CHANGE_CENTRIC"
-        s["lookback_minutes"] = 30
-        s["prior_boost"] = {"deploy_regression": 0.15}
-
-    elif action == "B_TRACE_15M_1HOP_TOPO_WEIGHT":
-        s["mode"] = "TRACE_CAUSAL"
-        s["lookback_minutes"] = 15
-        s["neighbor_hops"] = 1
-        s["weights_preset"] = "topology_heavy"
-
     elif action == "C_LOOKBACK_30M":
         s["lookback_minutes"] = 30
-    elif action == "C_NEIGHBORS_2HOP":
-        s["neighbor_hops"] = 2
-
-    s["lookback_minutes"] = min(60, max(0, int(s["lookback_minutes"])))
-    s["neighbor_hops"] = min(3, max(0, int(s["neighbor_hops"])))
     return s
+
+def get_action_details(action_id: str) -> Optional[ActionProbe]:
+    return TAXONOMY.get(action_id)

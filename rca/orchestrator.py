@@ -66,6 +66,24 @@ def load_policy(model_path):
     return bundle.get("model"), bundle.get("feature_cols", FEATURE_COLS)
 
 
+def select_adaptation_action(result: dict, model_path: str) -> str:
+    """Selects an adaptation action, falling back to heuristics if the model is missing."""
+    model_info = load_policy(model_path)
+    if model_info is None:
+        return fallback_action(result)
+    
+    model, cols = model_info
+    feats = extract_policy_features(result)
+    X = pd.DataFrame([[feats.get(c, 0) for c in cols]], columns=cols)
+    return model.predict(X)[0]
+
+from rca.persistent_graph import GraphManager
+from rca.forecasting import forecast_impact
+from rca.probes import orchestrate_probes
+
+# Global (or singleton-like) manager for the persistent reliability graph
+_graph_manager = GraphManager()
+
 def run_with_aogc(run_data: dict, model_path: str):
     events = normalize_all(run_data)
     incident = build_one_incident(events)
@@ -88,19 +106,23 @@ def run_with_aogc(run_data: dict, model_path: str):
         "action": None,
         "kept": "baseline",
         "deltas": {},
+        "forecasting": None,
+        "probes": []
     }
+    
+    # Persistent Graph Update
+    _graph_manager.update_graph(r0["topology_summary"], events["manifest"].get("run_id", "now"))
+    _graph_manager.save()
 
     if not should_adapt(r0):
+        # Final CEF enrichment
+        es = r0.get("epistemic_state", {})
+        bundle["forecasting"] = forecast_impact(incident, r0["topology_summary"], es.get("health_claims", []))
+        bundle["probes"] = orchestrate_probes(es.get("contradictions", []), r0["topology_summary"])
         return bundle
 
-    model_info = load_policy(model_path)
-    if model_info is None:
-        action = fallback_action(r0)
-    else:
-        model, cols = model_info
-        feats = extract_policy_features(r0)
-        X = pd.DataFrame([[feats.get(c, 0) for c in cols]], columns=cols)
-        action = model.predict(X)[0]
+    # Unified action selection
+    action = select_adaptation_action(r0, model_path)
 
     s1 = apply_action_to_strategy(base_strategy, action)
     r1 = run_pipeline_once(events, incident, s1)
@@ -119,5 +141,11 @@ def run_with_aogc(run_data: dict, model_path: str):
     if (a1 - b1) >= MIN_DELTA:
         bundle["final"] = r1
         bundle["kept"] = "rerun"
+        
+    # Final CEF enrichment
+    final_res = bundle["final"]
+    es = final_res.get("epistemic_state", {})
+    bundle["forecasting"] = forecast_impact(incident, final_res["topology_summary"], es.get("health_claims", []))
+    bundle["probes"] = orchestrate_probes(es.get("contradictions", []), final_res["topology_summary"])
 
     return bundle

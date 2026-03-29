@@ -5,6 +5,7 @@ from rca.scoring import score_hypotheses
 from rca.tss import compute_tss
 from rca.mepp import build_mepp
 from rca.utils import inventory_from_run
+from rca.cef import extract_epistemic_state
 
 
 def run_pipeline_once(events, incident, strategy):
@@ -18,6 +19,8 @@ def run_pipeline_once(events, incident, strategy):
     inv = inventory_from_run(events, incident, topo)
 
     mepp = build_mepp(top3, events, incident, topo, signals)
+    
+    epistemic_state = extract_epistemic_state(events, signals, incident, topo=topo)
 
     return {
         "run_id": events["manifest"].get("run_id"),
@@ -34,5 +37,6 @@ def run_pipeline_once(events, incident, strategy):
         },
         "architecture_flags": arch_flags,
         "mepp": mepp,
+        "epistemic_state": epistemic_state,
         "debug": {"strategy": strategy, "signals": signals},
     }

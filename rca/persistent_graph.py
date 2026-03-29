@@ -57,9 +57,10 @@ class GraphManager:
 
         # Update Edges
         for edge in current_topo.get("edges", []):
-            src, tgt = edge.get("source"), edge.get("target")
+            src, tgt = edge.get("src"), edge.get("dst")
+            if not src or not tgt: continue
             edge_key = f"{src}->{tgt}"
-            conf = edge.get("confidence", 0.0)
+            conf = edge.get("conf", 0.0)
             
             if edge_key not in self.graph.edges:
                 self.graph.edges[edge_key] = GraphEdge(

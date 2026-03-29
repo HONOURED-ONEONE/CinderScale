@@ -34,6 +34,8 @@ def run_pipeline_once(events, incident, strategy):
             "confidence": topo.get("confidence", 0.0),
             "edge_count": len(topo.get("edges", [])),
             "avg_edge_conf": topo.get("avg_edge_conf", 0.0),
+            "nodes": topo.get("nodes", []),
+            "edges": topo.get("edges", []),
         },
         "architecture_flags": arch_flags,
         "mepp": mepp,

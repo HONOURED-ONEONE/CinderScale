@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlPlane.Controllers;
 
 [ApiController]
-[Route("control")]
+[Route("api/[controller]")]
 public class ControlController : ControllerBase
 {
     private readonly IMemoryStore _memoryStore;

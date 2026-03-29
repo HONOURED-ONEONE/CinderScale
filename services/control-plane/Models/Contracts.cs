@@ -36,6 +36,42 @@ public class Hypothesis
     
     [JsonPropertyName("confidence")]
     public double Confidence { get; set; }
+    
+    [JsonPropertyName("actions")]
+    public List<string>? Actions { get; set; }
+}
+
+public class TopologySummary
+{
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+
+    [JsonPropertyName("edge_count")]
+    public int EdgeCount { get; set; }
+
+    [JsonPropertyName("avg_edge_conf")]
+    public double AvgEdgeConf { get; set; }
+
+    [JsonPropertyName("nodes")]
+    public Dictionary<string, object>? Nodes { get; set; }
+
+    [JsonPropertyName("edges")]
+    public List<object>? Edges { get; set; }
+}
+
+public class MEPP
+{
+    [JsonPropertyName("hypothesis")]
+    public string Hypothesis { get; set; } = string.Empty;
+
+    [JsonPropertyName("confidence")]
+    public double Confidence { get; set; }
+
+    [JsonPropertyName("minimal_evidence")]
+    public List<object> MinimalEvidence { get; set; } = new();
+
+    [JsonPropertyName("recommended_action")]
+    public string? RecommendedAction { get; set; }
 }
 
 public class PipelineResult
@@ -43,12 +79,27 @@ public class PipelineResult
     [JsonPropertyName("run_id")]
     public string RunId { get; set; } = string.Empty;
 
+    [JsonPropertyName("incident_id")]
+    public string IncidentId { get; set; } = string.Empty;
+
+    [JsonPropertyName("mode")]
+    public string Mode { get; set; } = string.Empty;
+
     [JsonPropertyName("tss")]
     public double Tss { get; set; }
 
     [JsonPropertyName("top3")]
     public List<Hypothesis> Top3 { get; set; } = new();
-    
+
+    [JsonPropertyName("missing")]
+    public List<string> Missing { get; set; } = new();
+
+    [JsonPropertyName("topology_summary")]
+    public TopologySummary? TopologySummary { get; set; }
+
+    [JsonPropertyName("mepp")]
+    public List<MEPP> Mepp { get; set; } = new();
+
     [JsonPropertyName("epistemic_state")]
     public EpistemicState? EpistemicState { get; set; }
 }
@@ -60,6 +111,9 @@ public class EpistemicState
 
     [JsonPropertyName("contradictions")]
     public List<Contradiction> Contradictions { get; set; } = new();
+
+    [JsonPropertyName("reliability_graph_nodes")]
+    public List<string> ReliabilityGraphNodes { get; set; } = new();
 }
 
 public class HealthClaim
@@ -69,6 +123,9 @@ public class HealthClaim
 
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
+
+    [JsonPropertyName("evidence")]
+    public string? Evidence { get; set; }
 
     [JsonPropertyName("confidence")]
     public double Confidence { get; set; }
@@ -84,6 +141,9 @@ public class Contradiction
 
     [JsonPropertyName("severity")]
     public string Severity { get; set; } = string.Empty;
+
+    [JsonPropertyName("resolved")]
+    public bool Resolved { get; set; }
 }
 
 public class RCABundle
@@ -102,4 +162,10 @@ public class RCABundle
 
     [JsonPropertyName("probes")]
     public List<object> Probes { get; set; } = new();
+
+    [JsonPropertyName("action")]
+    public string? Action { get; set; }
+
+    [JsonPropertyName("deltas")]
+    public Dictionary<string, object>? Deltas { get; set; }
 }

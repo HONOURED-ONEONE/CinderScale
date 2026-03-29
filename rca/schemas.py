@@ -29,6 +29,8 @@ class TopologySummary(BaseModel):
     confidence: float
     edge_count: int
     avg_edge_conf: float
+    nodes: Optional[Dict[str, Any]] = {}
+    edges: Optional[List[Dict[str, Any]]] = []
 
 class Inventory(BaseModel):
     evidence_diversity: float
@@ -39,7 +41,7 @@ class MEPP(BaseModel):
     """Minimal Evidence Proof Pack"""
     hypothesis: str
     confidence: float
-    minimal_evidence: Dict[str, Any]
+    minimal_evidence: List[Dict[str, Any]]
     recommended_action: Optional[str] = None
 
 class HealthClaim(BaseModel):

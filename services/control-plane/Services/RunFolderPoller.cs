@@ -100,7 +100,6 @@ public class RunFolderPoller : BackgroundService
                 await _ledgerService.RecordEventAsync(runId, "AnalysisComplete", $"Kept: {analysisResult.Kept}");
 
                 // --- CEF Epistemic Falsification Control Loop ---
-                var finalResult = analysisResult.Final;
                 if (finalResult?.EpistemicState != null)
                 {
                     var claims = finalResult.EpistemicState.HealthClaims;

@@ -45,3 +45,13 @@ def get_forecast(scope: str = "system") -> Dict[str, Any]:
     history = store.load_history()
     model = ForecastModel()
     return model.predict_risk(history, scope=scope)
+
+def forecast_impact(incident: Dict[str, Any], topology: Dict[str, Any], claims: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Continuous Epistemic Falsifier (CEF) extension:
+    Predicts verifiability risk based on current incident scope, inferred topology, 
+    and established health claims.
+    """
+    # For MVP, we leverage the rolling trend history. 
+    # Future versions can use incident features for more specific impact forecasting.
+    return get_forecast(scope="system")

@@ -32,6 +32,10 @@ class HistoryStore:
         timestamp = datetime.now().isoformat()
         
         # System-level entry
+        debug_data = pipeline_result.get("debug") or {}
+        topo_data = pipeline_result.get("topology_summary") or {}
+        inv_data = pipeline_result.get("inventory") or {}
+        
         system_entry = HistoryEntry(
             timestamp=timestamp,
             run_id=run_id,
@@ -41,11 +45,11 @@ class HistoryStore:
             missing_corr_ids=1 if "correlation_ids_in_logs" in pipeline_result.get("missing", []) else 0,
             missing_metrics=1 if "key_metrics" in pipeline_result.get("missing", []) else 0,
             missing_changes=1 if "change_events" in pipeline_result.get("missing", []) else 0,
-            topology_conf=pipeline_result.get("topology_summary", {}).get("confidence", 0.0),
-            edge_count=pipeline_result.get("topology_summary", {}).get("edge_count", 0),
-            avg_edge_conf=pipeline_result.get("topology_summary", {}).get("avg_edge_conf", 0.0),
-            evidence_diversity=pipeline_result.get("inventory", {}).get("evidence_diversity", 0.0),
-            anomaly_count=len(pipeline_result.get("debug", {}).get("signals", {}).get("anomalies", [])),
+            topology_conf=topo_data.get("confidence", 0.0),
+            edge_count=topo_data.get("edge_count", 0),
+            avg_edge_conf=topo_data.get("avg_edge_conf", 0.0),
+            evidence_diversity=inv_data.get("evidence_diversity", 0.0),
+            anomaly_count=len(debug_data.get("signals", {}).get("anomalies", [])),
             is_deploy=1 if pipeline_result.get("architecture_flags", {}).get("is_deploy", False) else 0,
             contradiction_count=len(epistemic_state.get("contradictions", [])) if epistemic_state else 0
         )
@@ -71,8 +75,8 @@ class HistoryStore:
                     edge_count=system_entry.edge_count,
                     avg_edge_conf=system_entry.avg_edge_conf,
                     evidence_diversity=system_entry.evidence_diversity,
-                    anomaly_count=1 if any(svc in str(a) for a in pipeline_result.get("debug", {}).get("signals", {}).get("anomalies", [])) else 0,
-                    is_deploy=1 if any(svc == c.get("service") for c in pipeline_result.get("debug", {}).get("events", {}).get("changes", []) if c.get("type") == "deploy") else 0,
+                    anomaly_count=1 if any(svc in str(a) for a in debug_data.get("signals", {}).get("anomalies", [])) else 0,
+                    is_deploy=1 if any(svc == c.get("service") for c in debug_data.get("events", {}).get("changes", []) if c.get("type") == "deploy") else 0,
                     contradiction_count=len(svc_contradictions)
                 )
                 self._write_entry(entry)

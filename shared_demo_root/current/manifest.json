@@ -1,0 +1,10 @@
+{
+  "run_id": "smoke-run-001",
+  "scenario": "latency-spike",
+  "variant": "base",
+  "streams": {
+    "alerts": "alerts.jsonl",
+    "logs": "logs.jsonl",
+    "metrics": "metrics.jsonl"
+  }
+}

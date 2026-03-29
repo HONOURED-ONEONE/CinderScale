@@ -1,52 +1,67 @@
-# RCA Copilot (Demo)
+# RCA Copilot (Hybrid Architecture)
 
-## Run
+This repository contains a hybrid RCA analytical system combining a high-performance Python engine with a .NET control plane.
+
+## Architecture Overview
+
+1.  **Python Analytical Engine (`api.py`)**: FastAPI service that executes the core RCA pipeline, AOGC adaptation, and Continuous Epistemic Falsification (CEF).
+2.  **NET Control Plane (`services/control-plane/`)**: Production orchestrator that polls a shared telemetry folder and delegates analysis to the Python API.
+3.  **Streamlit Dashboard (`app.py`)**: UI for visualizing RCA results, health claims, contradictions, and the falsification ledger.
+
+## Startup Order (Local Development)
+
+To run the full hybrid system:
+
+1.  **Start Python Analytical Engine**:
+    ```bash
+    # From project root
+    python api.py
+    ```
+    API will be available at `http://localhost:8000`.
+
+2.  **Start .NET Control Plane**:
+    ```bash
+    cd services/control-plane
+    dotnet run
+    ```
+    Control Plane will be available at `http://localhost:5000`.
+
+3.  **Start Streamlit Dashboard**:
+    ```bash
+    # From project root
+    streamlit run app.py
+    ```
+    UI will be available at `http://localhost:8501`.
+
+## End-to-End Smoke Verification
+
+A local smoke test is provided to verify the analytical engine, history recording, and persistent graph population.
 
 ```bash
-cd ~/RCA-copilot
-pip install -r requirements.txt
-streamlit run app.py
+python tests/reproduce_smoke.py
 ```
 
-## Expected input (from TelemetryStorm)
+This script:
+1.  Loads a sample run from `shared_demo_root/current/`.
+2.  Executes the full AOGC + CEF pipeline.
+3.  Verifies that `rca_history.jsonl` and `reliability_graph.json` are populated.
 
-RCA Copilot watches a shared folder (default `shared_demo_root/current`).
-TelemetryStorm should atomically swap a fully generated dataset into `current/`.
+## Testing
 
-`current/` must contain:
-- `READY` marker file
-- `manifest.json` (written last)
-- `alerts.jsonl`, `logs.jsonl`, `metrics.jsonl`, `changes.jsonl`
-- `traces.jsonl` optional (variant dependent)
-
-Optional:
-- `truth.json` for accuracy display (not required)
-- `stats.json` for quick UI info
-
-## Policy model
-
-If `policy/model.joblib` exists, AOGC uses it to choose one adaptation action and reruns once.
-If missing, a rule-based fallback action is used so the demo still works.
-
----
-
-## Analytical Engine API Boundaries
-
-The Python codebase has been refactored to cleanly separate the runtime orchestrator, the UI, and the analytical core:
-
-1. **`app.py`**: Now purely a Streamlit UI layer.
-2. **`rca/runtime.py`**: A new orchestrator module encapsulating directory polling and analysis invocation.
-3. **`api.py`**: A standalone FastAPI service wrapping the core analytical pipeline (`run_pipeline_once` and `run_with_aogc`), decoupled from folder-polling logic.
-4. **`rca/schemas.py`**: Typed, explicit Pydantic models for incoming telemetry and output RCA bundles, including forward-compatibility structures for continuous Epistemic Falsification (Health Claims and Contradictions).
-
-### Running the .NET Control Plane
-
-The `.NET` Control Plane service is located under `services/control-plane`. It acts as the production orchestrator, polling the shared folder and delegating analysis to the Python API.
-
-To run it locally:
+### Python Tests
 ```bash
-cd services/control-plane
-dotnet run
+pytest
 ```
-It runs an ASP.NET Core API on ports `http://localhost:5000` (or 5xxx depending on your environment).
-You can hit endpoints like `GET /control/status` or `GET /control/latest-analysis`.
+
+### .NET Tests
+```bash
+cd services/control-plane/ControlPlane.Tests
+dotnet test
+```
+
+## Telemetry Input Specification
+
+The control plane watches `shared_demo_root/current/` for:
+- `READY`: Marker file indicating a complete dataset.
+- `manifest.json`: Metadata (run_id, scenario, variant).
+- `alerts.jsonl`, `logs.jsonl`, `metrics.jsonl`, `traces.jsonl`, `changes.jsonl`: Telemetry data in JSONL format.

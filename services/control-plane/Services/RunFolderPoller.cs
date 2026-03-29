@@ -64,7 +64,13 @@ public class RunFolderPoller : BackgroundService
         var manifest = JsonSerializer.Deserialize<Manifest>(manifestJson);
         var runId = manifest?.RunId;
 
-        if (!string.IsNullOrEmpty(runId) && runId != _lastProcessedRunId)
+        if (manifest == null || string.IsNullOrEmpty(runId))
+        {
+            _logger.LogWarning("Manifest is null or missing run_id in {Path}", manifestPath);
+            return;
+        }
+
+        if (runId != _lastProcessedRunId)
         {
             _logger.LogInformation("Detected new run: {RunId}. Processing...", runId);
             _memoryStore.ControlPlaneStatus = $"Processing {runId}";

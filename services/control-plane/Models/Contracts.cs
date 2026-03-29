@@ -6,6 +6,12 @@ public class Manifest
 {
     [JsonPropertyName("run_id")]
     public string RunId { get; set; } = string.Empty;
+
+    [JsonPropertyName("scenario")]
+    public string? Scenario { get; set; }
+
+    [JsonPropertyName("variant")]
+    public string? Variant { get; set; }
 }
 
 public class RunData
